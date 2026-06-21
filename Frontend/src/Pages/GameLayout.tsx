@@ -20,7 +20,7 @@ const GameLayout: React.FC = () => {
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const socket = new WebSocket("ws://192.168.0.112:8080");
+    const socket = new WebSocket("wss://world-domination-backend-production.up.railway.app");
     socketRef.current = socket;
 
     socket.onmessage = (event) => {
