@@ -83,7 +83,9 @@ const GameLayout: React.FC = () => {
   const handleJumpToTile = () => {
     const r = parseInt(inputRow, 10);
     const c = parseInt(inputCol, 10);
-    if (!isNaN(r) && !isNaN(c)) setMoveToTarget([r, c]);
+    if (!isNaN(r) && !isNaN(c)) {
+      setMoveToTarget([r, c]);
+    }
   };
 
   return (
@@ -94,19 +96,51 @@ const GameLayout: React.FC = () => {
         receivedText={liveText} 
       />
       
-      <div className="absolute top-4 left-4 z-50 bg-slate-800/90 p-3 rounded-lg border border-slate-700 flex gap-2">
-        <button
-          onClick={() => setMoveToTarget([0, 0])}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition"
-        >
-          📍 Focus Island Center [0, 0]
-        </button>
-        <button
-          onClick={() => setMoveToTarget([99999, 99999])}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition"
-        >
-          📍 Focus Island Center [2000, 1000]
-        </button>
+      {/* 🛠️ Map Navigation & Jump Controls Panel */}
+      <div className="absolute top-4 left-4 z-50 bg-slate-800/90 p-4 rounded-lg border border-slate-700 flex flex-col gap-3 shadow-xl backdrop-blur-sm max-w-xs">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setMoveToTarget([0, 0])}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition flex-1"
+          >
+            📍 Center [0, 0]
+          </button>
+          <button
+            onClick={() => setMoveToTarget([2000, 1000])}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition flex-1"
+          >
+            📍 Center [2000, 1000]
+          </button>
+        </div>
+
+        <hr className="border-slate-700" />
+
+        {/* 🚀 Jump inputs setup */}
+        <div className="flex flex-col gap-2">
+          <label className="text-slate-300 text-xs font-medium">Jump to Coordinates:</label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              placeholder="Row"
+              value={inputRow}
+              onChange={(e) => setInputRow(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-emerald-500"
+            />
+            <input
+              type="number"
+              placeholder="Col"
+              value={inputCol}
+              onChange={(e) => setInputCol(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <button
+            onClick={handleJumpToTile}
+            className="w-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold py-1.5 rounded transition mt-1"
+          >
+            ⚡ Jump to Tile
+          </button>
+        </div>
       </div>
 
       <GameMap

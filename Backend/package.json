@@ -10,7 +10,8 @@
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
-    "dev": "Nodemon server.js"
+    "dev": "nodemon server.js",
+    "start": "node server.js"
   },
   "dependencies": {
     "argon2": "^0.44.0",
