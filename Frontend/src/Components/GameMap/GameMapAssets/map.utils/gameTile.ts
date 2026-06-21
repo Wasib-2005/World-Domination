@@ -1,4 +1,5 @@
-import type { GameMapColors } from "../../../types/gameMap.types";
+import type { TerrainType } from "../../../types/gameMap.types";
+import { getCachedTile } from "./terrain/terrainAssets/tileCache";
 
 export const gameTile = (
   ctx: CanvasRenderingContext2D,
@@ -8,34 +9,18 @@ export const gameTile = (
   row: number,
   col: number,
   scale: number,
-  colors: GameMapColors,
   isHovered: boolean,
+  terrain?: TerrainType,
 ): void => {
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const angle = (Math.PI / 3) * i - Math.PI / 2;
-    const x = centerX + radius * Math.cos(angle);
-    const y = centerY + radius * Math.sin(angle);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.closePath();
+  const sprite = getCachedTile(terrain ?? "empty", row, col, radius, isHovered);
+  const size = sprite.width;
+  ctx.drawImage(ctx === ctx ? sprite : sprite, centerX - size / 2, centerY - size / 2, size, size);
 
-  ctx.fillStyle = isHovered ? colors.hoverTileFill : colors.tileFill;
-  ctx.fill();
-
-  ctx.strokeStyle = isHovered ? colors.hoverTileBorder : colors.tileBorder;
-  ctx.lineWidth = isHovered ? 3.0 : 2;
-  ctx.stroke();
-
-  if (scale > 0.4) {
-    ctx.fillStyle = colors.text;
-    ctx.font = "10px monospace";
+  if (isHovered && scale > 0.5) {
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = "bold 10px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-
-    ctx.fillText(`R:${row + 1} C:${col + 1}`, centerX, centerY - 6);
-    ctx.fillStyle = "#f59e0b";
-    ctx.fillText("dfsadfasd", centerX, centerY + 6);
+    ctx.fillText(`${row + 1},${col + 1}`, centerX, centerY - radius * 0.55 + 14);
   }
 };

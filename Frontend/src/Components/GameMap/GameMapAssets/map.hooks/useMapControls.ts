@@ -20,6 +20,7 @@ export const useMapControls = (
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   rows: number,
   columns: number,
+  onTileClick?: (row: number, col: number) => void,
 ) => {
   const [transform, setTransform] = useState<Transform>({
     x: 0,
@@ -36,6 +37,9 @@ export const useMapControls = (
   const totalDragDist = useRef<number>(0);
   const lastPointerPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const lastTouchDist = useRef<number>(0);
+  
+  // ⚡ Bulletproof timer for mobile long-press tooltips
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Resize Window
   useEffect(() => {
@@ -80,25 +84,18 @@ export const useMapControls = (
   const resolveTargetHex = useCallback(
     (clientX: number, clientY: number): HexCoord | null => {
       if (!canvasRef.current) return null;
-      return getHexFromScreen(
-        clientX,
-        clientY,
-        canvasRef.current,
-        transform,
-        rows,
-        columns,
-      );
+      return getHexFromScreen(clientX, clientY, canvasRef.current, transform, rows, columns);
     },
     [transform, rows, columns, canvasRef],
   );
 
   const handleCanvasClick = (clientX: number, clientY: number) => {
     const closestTile = resolveTargetHex(clientX, clientY);
-    console.log(closestTile);
     if (closestTile) {
-      console.log(
-        `🎯 Clicked Canvas Hex -> Row: ${closestTile.row + 1}, Col: ${closestTile.col + 1}`,
-      );
+      console.log(`🎯 Clicked Canvas Hex -> Row: ${closestTile.row + 1}, Col: ${closestTile.col + 1}`);
+      if (onTileClick) {
+        onTileClick(closestTile.row, closestTile.col);
+      }
     }
   };
 
@@ -107,7 +104,7 @@ export const useMapControls = (
     isDragging.current = true;
     totalDragDist.current = 0;
     lastPointerPos.current = { x: e.clientX, y: e.clientY };
-    setHoveredHex(null);
+    setHoveredHex(null); // Hide tooltip when clicking
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -122,16 +119,17 @@ export const useMapControls = (
         x: prev.x + deltaX,
         y: prev.y + deltaY,
       }));
+      setHoveredHex(null); // Hide tooltip while panning
     } else {
       const currentTile = resolveTargetHex(e.clientX, e.clientY);
       const isDifferent =
         (!currentTile && hoveredHex !== null) ||
-        (currentTile &&
-          (!hoveredHex ||
-            hoveredHex.row !== currentTile.row ||
-            hoveredHex.col !== currentTile.col));
+        (currentTile && (!hoveredHex || hoveredHex.row !== currentTile.row || hoveredHex.col !== currentTile.col));
 
-      if (isDifferent) setHoveredHex(currentTile);
+      // Update state with tile data AND pointer position for the tooltip
+      if (isDifferent) {
+        setHoveredHex(currentTile ? { ...currentTile, x: e.clientX, y: e.clientY } : null);
+      }
     }
   };
 
@@ -141,7 +139,9 @@ export const useMapControls = (
     if (totalDragDist.current < 6) {
       handleCanvasClick(e.clientX, e.clientY);
     }
-    setHoveredHex(resolveTargetHex(e.clientX, e.clientY));
+    
+    const tile = resolveTargetHex(e.clientX, e.clientY);
+    setHoveredHex(tile ? { ...tile, x: e.clientX, y: e.clientY } : null);
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -156,14 +156,22 @@ export const useMapControls = (
       totalDragDist.current = 0;
       const touch = e.touches[0];
       lastPointerPos.current = { x: touch.clientX, y: touch.clientY };
+
+      // ⚡ Mobile Tooltip Timer (Long press for 400ms)
+      longPressTimer.current = setTimeout(() => {
+        if (totalDragDist.current < 10) {
+          const tile = resolveTargetHex(touch.clientX, touch.clientY);
+          if (tile) {
+            setHoveredHex({ ...tile, x: touch.clientX, y: touch.clientY });
+            if (typeof navigator.vibrate === "function") navigator.vibrate(50);
+          }
+        }
+      }, 400);
     } else if (e.touches.length === 2) {
       isDragging.current = false;
       const t1 = e.touches[0];
       const t2 = e.touches[1];
-      lastTouchDist.current = Math.hypot(
-        t1.clientX - t2.clientX,
-        t1.clientY - t2.clientY,
-      );
+      lastTouchDist.current = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
       lastPointerPos.current = {
         x: (t1.clientX + t2.clientX) / 2,
         y: (t1.clientY + t2.clientY) / 2,
@@ -172,6 +180,9 @@ export const useMapControls = (
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // Cancel long press if the user drags their finger
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+
     if (e.touches.length === 1 && isDragging.current) {
       const touch = e.touches[0];
       const deltaX = touch.clientX - lastPointerPos.current.x;
@@ -185,12 +196,10 @@ export const useMapControls = (
         y: prev.y + deltaY,
       }));
     } else if (e.touches.length === 2) {
+      // ... your standard zoom math
       const t1 = e.touches[0];
       const t2 = e.touches[1];
-      const currentDist = Math.hypot(
-        t1.clientX - t2.clientX,
-        t1.clientY - t2.clientY,
-      );
+      const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
       const midX = (t1.clientX + t2.clientX) / 2;
       const midY = (t1.clientY + t2.clientY) / 2;
 
@@ -216,16 +225,17 @@ export const useMapControls = (
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (
-      isDragging.current &&
-      totalDragDist.current < 6 &&
-      e.changedTouches.length > 0
-    ) {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+
+    if (isDragging.current && totalDragDist.current < 6 && e.changedTouches.length > 0) {
       const touch = e.changedTouches[0];
       handleCanvasClick(touch.clientX, touch.clientY);
     }
     isDragging.current = false;
     lastTouchDist.current = 0;
+
+    // Fade tooltip out after lifting finger on mobile
+    setTimeout(() => setHoveredHex(null), 1500);
   };
 
   const jumpToHex = useCallback(

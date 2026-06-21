@@ -4,9 +4,11 @@
   "type": "module",
   "description": "",
   "scripts": {
-    "server": "cd Backend && nodemon index.js",
-    "client": "npm run dev --prefix Frontend -- --host",
-    "dev": "concurrently --kill-others --prefix \"[{name}]\" --names \"BACKEND,FRONTEND\" --prefix-colors \"red,blue\" \"npm run server\" \"npm run client\""
+    "server": "npm run dev -w Backend",
+    "server_dev": "npm start -w Backend",
+    "client": "npm run dev -w Frontend -- --host",
+    "dev": "concurrently --kill-others --prefix \"[{name}]\" --names \"BACKEND,FRONTEND\" --prefix-colors \"red,blue\" \"npm run server\" \"npm run client\"",
+    "start": "concurrently --kill-others --prefix \"[{name}]\" --names \"BACKEND,FRONTEND\" --prefix-colors \"red,blue\" \"npm run server_dev\" \"npm run client\""
   },
   "author": "Waslla",
   "license": "ISC",
